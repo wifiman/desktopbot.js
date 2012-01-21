@@ -127,11 +127,11 @@ pmCommands = {
 				for (i = 0; i < config.autoBans.length; ++i) {
 					if (config.autoBans[i].regex.toString() == remove) {
 						config.autoBans.splice(i, 1);
-						return '';
+						return;
 					}
 				}
 				reply('no match');
-				return '';
+				return;
 			}
 
 			var regex;
@@ -139,15 +139,13 @@ pmCommands = {
 				regex = new RegExp(newRegex);
 			} catch (err) {
 				reply('unable to compile (' + err + ')');
-				return '';
+				return;
 			}
 
 			config.autoBans.push({
 				regex: regex,
 				output: newOutput,
 			})
-
-			return '';
 		});
 		if (a == args) {
 			for (i = 0; i < config.autoBans.length; ++i) {
