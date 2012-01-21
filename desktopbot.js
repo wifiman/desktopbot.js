@@ -21,6 +21,7 @@ var ircConn = net.connect(config.serverPort, config.server, function () {
 
 var readBuf = '';
 var joined = false;
+var authed = false;
 
 function msg (to, message) {
 	return ircConn.write('PRIVMSG ' + to + ' :' + message + '\r\n');
@@ -171,6 +172,13 @@ ircConn.addListener('data', function (data) {
 		lines[i] = null;
 
 		switch (msgType) {
+		case '001':
+			if (!authed) {
+				if (config.auth)
+					config.auth(this);
+				authed = true;
+			}
+			break;
 		case '396':
 			if (!joined) {
 				if (config.channel)
