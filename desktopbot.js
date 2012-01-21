@@ -234,7 +234,7 @@ ircConn.addListener('data', function (data) {
 						cmd = pmCommands[cmd] || pmCommands[null];
 						if (cmd)
 							cmd(message[3], message[4], from, function (message) {
-								return msg(from, message);
+								return msg(fromNick, message);
 							});
 						break;
 					}
