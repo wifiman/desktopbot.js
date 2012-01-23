@@ -159,6 +159,50 @@ pmCommands = {
 			reply('EOL');
 		}
 	},
+	channel: function (me, args, from, reply) {
+		if (!config.adminRegex || !from.match(config.adminRegex))
+			return;
+
+		args = args.match(/^ *([^ ])([^ ]*)$/);
+		if (!args || !args[1]) {
+			for (channel in config.channels)
+				reply(channel + ' \u2192 ' + config.channels[channel]);
+			reply('EOL');
+			return;
+		}
+
+		var joinList, partList;
+		switch (args[1]) {
+			case '+':
+				if (config.channels[args[2]] == undefined)
+					ircConn.write('JOIN ' + args[2] + '\r\n');
+				config.channels[args[2]] = true;
+				break;
+			case '-':
+				if (args[2] && args[2] != '') {
+					if (config.channels[args[2]] != undefined)
+						ircConn.write('PART ' + args[2] + '\r\n');
+					delete(config.channels[args[2]]);
+				} else {
+					var chanList;
+					for (var channel in config.channels) {
+						if (!chanList)
+							chanList = channel;
+						else
+							chanList += ',' + channel;
+					}
+					config.channels = {};
+					if (chanList)
+						ircConn.write('PART ' + chanList + '\r\n');
+				}
+				break;
+			case '=':
+				if (config.channels[args[2]] == undefined)
+					ircConn.write('JOIN ' + args[2] + '\r\n');
+				config.channels[args[2]] = false;
+				break;
+		}
+	},
 	ping: function (me, args, from, reply) {
 		reply('pong');
 	},
