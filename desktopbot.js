@@ -206,7 +206,6 @@ pmCommands = {
 	ping: function (me, args, from, reply) {
 		reply('pong');
 	},
-	q2: commands.q2,
 }
 
 ircConn.addListener('data', function (data) {
