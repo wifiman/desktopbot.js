@@ -22,7 +22,7 @@ var ircConn = net.connect(config.serverPort, config.server, function () {
 		output = 'PASS ' + config.password + '\r\n' + output;
 
 	this.write(output);
-})
+});
 
 var readBuf = '';
 var joined = false;
@@ -95,12 +95,12 @@ function statQ2Server (family, host, port, timeout, callback) {
 		}
 
 		callback(null, serverInfo, players);
-	})
+	});
 	sock.addListener('error', function (exception) {
 		this.close();
 		clearTimeout(timer);
 		callback('socket error (' + err + ')');
-	})
+	});
 }
 
 function formatQ2Stat (serverInfo, players) {
@@ -161,7 +161,7 @@ pmCommands = {
 			config.autoBans.push({
 				regex: regex,
 				output: newOutput,
-			})
+			});
 		});
 		if (a == args) {
 			for (i = 0; i < config.autoBans.length; ++i) {
