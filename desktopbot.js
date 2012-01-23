@@ -60,53 +60,46 @@ var statusPacket = new Buffer(10);
 statusPacket.writeUInt32LE(0xFFFFFFFF, 0);
 statusPacket.write('status', 4);
 
-function statQ2Server (addr, timeout, callback) {
-	dns.lookup(addr.host, null, function (err, host, family) {
-		if (err) {
-			callback('unknown host (' + err + ')');
+function statQ2Server (family, host, port, timeout, callback) {
+	var sock = dgram.createSocket('udp' + family);
+	sock.send(statusPacket, 0, statusPacket.length, port, host);
+	var timer = setTimeout(function () {
+		sock.close();
+		callback('timeout');
+	}, timeout);
+	sock.addListener('message', function (response, rInfo) {
+		if (rInfo.address != host || rInfo.port != port)
 			return;
+		if (response.length < 4 || response.readUInt32LE(0) != 0xFFFFFFFF)
+			return;
+		response = response.toString('ascii', 4).split('\n');
+		if (!response[0].match(/^print/) || !response[1])
+			return;
+
+		this.close();
+		clearTimeout(timer);
+		var serverInfo = {};
+		response[1].replace(/\\([^\\]*)\\([^\\]*)/g, function (all, name, value) {
+			serverInfo[name] = value;
+		});
+		var players = [];
+		for (var i = 2; i < response.length; ++i) {
+			var player = response[i].match(/^([0-9-]+) +([0-9-]+) +"(.*)"( .*)?$/);
+			if (player) {
+				players.push({
+					score: parseInt(player[1]) || 0,
+					ping: parseInt(player[2]) || 0,
+					name: player[3] || '',
+				});
+			}
 		}
 
-		var sock = dgram.createSocket('udp' + family);
-		sock.send(statusPacket, 0, statusPacket.length, addr.port, host);
-		var timer = setTimeout(function () {
-			sock.close();
-			callback('timeout', host);
-		}, timeout);
-		sock.addListener('message', function (response, rInfo) {
-			if (rInfo.address != host || rInfo.port != addr.port)
-				return;
-			if (response.length < 4 || response.readUInt32LE(0) != 0xFFFFFFFF)
-				return;
-			response = response.toString('ascii', 4).split('\n');
-			if (!response[0].match(/^print/) || !response[1])
-				return;
-
-			this.close();
-			clearTimeout(timer);
-			var serverInfo = {};
-			response[1].replace(/\\([^\\]*)\\([^\\]*)/g, function (all, name, value) {
-				serverInfo[name] = value;
-			});
-			var players = [];
-			for (var i = 2; i < response.length; ++i) {
-				var player = response[i].match(/^([0-9-]+) +([0-9-]+) +"(.*)"( .*)?$/);
-				if (player) {
-					players.push({
-						score: parseInt(player[1]) || 0,
-						ping: parseInt(player[2]) || 0,
-						name: player[3] || '',
-					});
-				}
-			}
-
-			callback(null, host, serverInfo, players);
-		})
-		sock.addListener('error', function (exception) {
-			this.close();
-			clearTimeout(timer);
-			callback('socket error (' + err + ')', host);
-		})
+		callback(null, serverInfo, players);
+	})
+	sock.addListener('error', function (exception) {
+		this.close();
+		clearTimeout(timer);
+		callback('socket error (' + err + ')');
 	})
 }
 
@@ -125,9 +118,16 @@ commands = {
 		if (!addr)
 			return reply('unable to parse address');
 
-		statQ2Server(addr, 3000, function (err, host, serverInfo, players) {
-			reply(formatQ2Addr(host || addr.host, addr.port) + ' '
-			    + (err ? ': ' + err : formatQ2Stat(serverInfo, players)));
+		dns.lookup(addr.host, null, function (err, host, family) {
+			if (err) {
+				reply(formatQ2Addr(addr.host, addr.port) + ' : unknown host (' + err + ')');
+				return;
+			} else {
+				statQ2Server(family, host, addr.port, 3000, function (err, serverInfo, players) {
+					reply(formatQ2Addr(host, addr.port) + ' '
+					    + (err ? ': ' + err : formatQ2Stat(serverInfo, players)));
+				});
+			}
 		});
 	},
 }
