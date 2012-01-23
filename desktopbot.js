@@ -2,6 +2,11 @@ var config = require('./desktopbot.js.conf');
 
 if (!config.autoBans)
 	config.autoBans = [];
+if (!config.channels) {
+	config.channels = {};
+	if (config.channel)
+		config.channels[config.channel] = true;
+}
 
 var net = require('net');
 var dns = require('dns');
@@ -179,15 +184,22 @@ ircConn.addListener('data', function (data) {
 			break;
 		case '396':
 			if (!joined) {
-				if (config.channel)
-					this.write('JOIN ' + config.channel + '\r\n');
+				var chanList;
+				for (var channel in config.channels) {
+					if (!chanList)
+						chanList = channel;
+					else
+						chanList += ',' + channel;
+				}
+				if (chanList)
+					this.write('JOIN ' + chanList + '\r\n');
 				joined = true;
 			}
 			break;
 		case 'JOIN':
-			if (config.channel) {
-				var tmp = payload.match(/^ ([^ ]*)/);
-				if (tmp && tmp[1] == config.channel) {
+			if (true) {  // restrict scope of dest
+				var dest = payload.match(/^ ([^ ]*)/);
+				if (dest && config.channels[dest[1]]) {
 					for (var i = 0; i < config.autoBans.length; ++i) {
 						var tmp = from.match(config.autoBans[i].regex);
 						if (tmp) {
@@ -201,9 +213,9 @@ ircConn.addListener('data', function (data) {
 									return char;
 							});
 							// surround with KICKs, to make it harder for the kickee to see the mask but prevent kick-ban race
-							this.write('KICK ' + config.channel + ' ' + nick + '\r\n'
-							         + 'MODE ' + config.channel + ' +b ' + banMask + '\r\n'
-							         + 'KICK ' + config.channel + ' ' + nick + '\r\n');
+							this.write('KICK ' + dest[1] + ' ' + nick + '\r\n'
+							         + 'MODE ' + dest[1] + ' +b ' + banMask + '\r\n'
+							         + 'KICK ' + dest[1] + ' ' + nick + '\r\n');
 							break;
 						}
 					}
@@ -220,21 +232,19 @@ ircConn.addListener('data', function (data) {
 				if (message) {
 					var cmd = (message[3] || '').toLowerCase();
 					var fromNick = from.match(/^[^!]*/)[0];
-					switch (message[1]) {
-					case config.channel || false:
-						cmd = commands[cmd] || commands[null];
-						if (cmd)
-							cmd(message[3], message[4], from, function (message) {
-								return msg(config.channel, fromNick + ': ' + message);
-							});
-						break;
-					case config.nick:
+					if (message[1] == config.nick) {
 						cmd = pmCommands[cmd] || pmCommands[null];
 						if (cmd)
 							cmd(message[3], message[4], from, function (message) {
 								return msg(fromNick, message);
 							});
-						break;
+					} else if (config.channels[message[1]] != undefined) {
+						cmd = commands[cmd] || commands[null];
+						var channel = message[1];
+						if (cmd)
+							cmd(message[3], message[4], from, function (message) {
+								return msg(channel, fromNick + ': ' + message);
+							});
 					}
 				}
 			} while (0);  // restrict scope of message
