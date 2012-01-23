@@ -214,7 +214,7 @@ ircConn.addListener('data', function (data) {
 
 	for (var i = 0; i < lines.length; ++i) {
 		lines[i] = lines[i].match(/^(:([^ ]*) )?([^ ]*)(.*)$/);
-		var from = lines[i][2], msgType = lines[i][3], payload = lines[i][4];
+		var from = lines[i][2] || '', msgType = lines[i][3], payload = lines[i][4];
 		lines[i] = null;
 
 		switch (msgType) {
