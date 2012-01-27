@@ -134,7 +134,7 @@ function formatQ2Stat (serverInfo, players) {
 }
 
 commands = {
-	q2: function (me, args, fromNick, fromMask, reply) {
+	q2: function (me, args, fromNick, fromMask, inChannel, reply) {
 		var addr = parseQ2Addr(args);
 		if (!addr)
 			return reply('unable to parse address');
@@ -153,7 +153,7 @@ commands = {
 }
 
 pmCommands = {
-	ban: function (me, args, fromNick, fromMask, reply) {
+	ban: function (me, args, fromNick, fromMask, inChannel, reply) {
 		if (!config.adminRegex || !(fromNick + fromMask).match(config.adminRegex))
 			return;
 
@@ -190,7 +190,7 @@ pmCommands = {
 			reply('EOL');
 		}
 	},
-	channel: function (me, args, fromNick, fromMask, reply) {
+	channel: function (me, args, fromNick, fromMask, inChannel, reply) {
 		if (!config.adminRegex || !(fromNick + fromMask).match(config.adminRegex))
 			return;
 
@@ -234,7 +234,7 @@ pmCommands = {
 				break;
 		}
 	},
-	ping: function (me, args, fromNick, fromMask, reply) {
+	ping: function (me, args, fromNick, fromMask, inChannel, reply) {
 		reply('pong');
 	},
 }
@@ -311,14 +311,14 @@ ircConn.addListener('data', function (data) {
 					if (message[1] == config.nick) {
 						cmd = pmCommands[cmd] || pmCommands[null];
 						if (cmd)
-							cmd(message[3], message[4], fromNick, fromMask, function (message) {
+							cmd(message[3], message[4], fromNick, fromMask, null, function (message) {
 								return msg(fromNick, message);
 							});
 					} else if (config.channels[message[1]] != undefined) {
 						cmd = commands[cmd] || commands[null];
 						var channel = message[1];
 						if (cmd)
-							cmd(message[3], message[4], fromNick, fromMask, function (message) {
+							cmd(message[3], message[4], fromNick, fromMask, channel, function (message) {
 								return msg(channel, fromNick + ': ' + message);
 							});
 					}
