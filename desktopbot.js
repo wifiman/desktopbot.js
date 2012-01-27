@@ -271,9 +271,8 @@ ircConn.addListener('data', function (data) {
 			}
 			break;
 		case 'JOIN':
-			if (true) {  // restrict scope of dest
-				var dest = payload.match(/^ ([^ ]*)/);
-				if (dest && config.channels[dest[1]]) {
+			payload.match(/^ ?([^ ]*)( .*)?$/)[1].replace(/[^,]+/g, function (dest) {
+				if (config.channels[dest]) {
 					for (var i = 0; i < config.autoBans.length; ++i) {
 						var tmp = from.match(config.autoBans[i].regex);
 						if (tmp) {
@@ -287,14 +286,14 @@ ircConn.addListener('data', function (data) {
 									return char;
 							});
 							// surround with KICKs, to make it harder for the kickee to see the mask but prevent kick-ban race
-							this.write('KICK ' + dest[1] + ' ' + nick + '\r\n'
-							         + 'MODE ' + dest[1] + ' +b ' + banMask + '\r\n'
-							         + 'KICK ' + dest[1] + ' ' + nick + '\r\n');
+							ircConn.write('KICK ' + dest + ' ' + nick + '\r\n'
+							            + 'MODE ' + dest + ' +b ' + banMask + '\r\n'
+							            + 'KICK ' + dest + ' ' + nick + '\r\n');
 							break;
 						}
 					}
 				}
-			}
+			});
 			break;
 		case 'PING':
 			this.write('PONG' + payload + '\r\n');
