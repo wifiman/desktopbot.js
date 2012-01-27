@@ -132,12 +132,11 @@ commands = {
 			if (err) {
 				reply(formatQ2Addr(addr.host, addr.port) + ' : unknown host (' + err + ')');
 				return;
-			} else {
-				statQ2Server(family, host, addr.port, 3000, function (err, serverInfo, players) {
-					reply(formatQ2Addr(host, addr.port) + ' '
-					    + (err ? ': ' + err : formatQ2Stat(serverInfo, players)));
-				});
 			}
+			statQ2Server(family, host, addr.port, 3000, function (err, serverInfo, players) {
+				reply(formatQ2Addr(host, addr.port) + ' '
+				    + (err ? ': ' + err : formatQ2Stat(serverInfo, players)));
+			});
 		});
 	},
 }
