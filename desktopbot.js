@@ -204,34 +204,34 @@ pmCommands = {
 
 		var joinList, partList;
 		switch (args[1]) {
-			case '+':
-				if (config.channels[args[2]] == undefined)
-					ircConn.write('JOIN ' + args[2] + '\r\n');
-				config.channels[args[2]] = true;
-				break;
-			case '-':
-				if (args[2] && args[2] != '') {
-					if (config.channels[args[2]] != undefined)
-						ircConn.write('PART ' + args[2] + '\r\n');
-					delete(config.channels[args[2]]);
-				} else {
-					var chanList;
-					for (var channel in config.channels) {
-						if (!chanList)
-							chanList = channel;
-						else
-							chanList += ',' + channel;
-					}
-					config.channels = {};
-					if (chanList)
-						ircConn.write('PART ' + chanList + '\r\n');
+		case '+':
+			if (config.channels[args[2]] == undefined)
+				ircConn.write('JOIN ' + args[2] + '\r\n');
+			config.channels[args[2]] = true;
+			break;
+		case '-':
+			if (args[2] && args[2] != '') {
+				if (config.channels[args[2]] != undefined)
+					ircConn.write('PART ' + args[2] + '\r\n');
+				delete(config.channels[args[2]]);
+			} else {
+				var chanList;
+				for (var channel in config.channels) {
+					if (!chanList)
+						chanList = channel;
+					else
+						chanList += ',' + channel;
 				}
-				break;
-			case '=':
-				if (config.channels[args[2]] == undefined)
-					ircConn.write('JOIN ' + args[2] + '\r\n');
-				config.channels[args[2]] = false;
-				break;
+				config.channels = {};
+				if (chanList)
+					ircConn.write('PART ' + chanList + '\r\n');
+			}
+			break;
+		case '=':
+			if (config.channels[args[2]] == undefined)
+				ircConn.write('JOIN ' + args[2] + '\r\n');
+			config.channels[args[2]] = false;
+			break;
 		}
 	},
 	ping: function (me, args, fromNick, fromMask, inChannel, reply) {
