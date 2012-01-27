@@ -63,10 +63,13 @@ statusPacket.write('status', 4);
 function statQ2Server (family, host, port, timeout, callback) {
 	var sock = dgram.createSocket('udp' + family);
 	sock.send(statusPacket, 0, statusPacket.length, port, host);
-	var timer = setTimeout(function () {
-		sock.close();
-		callback('timeout');
-	}, timeout);
+	var timer;
+	if (timeout) {
+		timer = setTimeout(function () {
+			sock.close();
+			callback('timeout');
+		}, timeout);
+	}
 	sock.addListener('message', function (response, rInfo) {
 		if (rInfo.address != host || rInfo.port != port)
 			return;
@@ -77,7 +80,8 @@ function statQ2Server (family, host, port, timeout, callback) {
 			return;
 
 		this.close();
-		clearTimeout(timer);
+		if (timer)
+			clearTimeout(timer);
 		var serverInfo = {};
 		response[1].replace(/\\([^\\]*)\\([^\\]*)/g, function (all, name, value) {
 			serverInfo[name] = value;
@@ -98,12 +102,14 @@ function statQ2Server (family, host, port, timeout, callback) {
 	});
 	sock.addListener('error', function (exception) {
 		this.close();
-		clearTimeout(timer);
+		if (timer)
+			clearTimeout(timer);
 		callback('socket error (' + err + ')');
 	});
 	return function () {
 		sock.close();
-		clearTimeout(timer);
+		if (timer)
+			clearTimeout(timer);
 	};
 }
 
