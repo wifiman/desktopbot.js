@@ -94,9 +94,20 @@ function statQ2Server (family, host, port, timeout, callback) {
 					score: parseInt(player[1]) || 0,
 					ping: parseInt(player[2]) || 0,
 					name: player[3] || '',
+					index: i - 2,
 				});
 			}
 		}
+
+		players.sort(function (a, b) {
+			switch (true) {
+			case a.name  < b.name:  return -1;
+			case a.name  > b.name:  return 1;
+			case a.index < b.index: return -1;
+			case a.index > b.index: return 1;
+			default: return 0;
+			}
+		});
 
 		callback(null, serverInfo, players);
 	});
