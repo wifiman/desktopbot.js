@@ -134,7 +134,7 @@ function formatQ2Stat (serverInfo, players) {
 }
 
 commands = {
-	q2: function (me, args, from, reply) {
+	q2: function (me, args, fromNick, fromMask, reply) {
 		var addr = parseQ2Addr(args);
 		if (!addr)
 			return reply('unable to parse address');
@@ -153,8 +153,8 @@ commands = {
 }
 
 pmCommands = {
-	ban: function (me, args, from, reply) {
-		if (!config.adminRegex || !from.match(config.adminRegex))
+	ban: function (me, args, fromNick, fromMask, reply) {
+		if (!config.adminRegex || !(fromNick + fromMask).match(config.adminRegex))
 			return;
 
 		var a = args.replace(/-([^ ]+)|[^- ]([^ ]+) +([^ ]+)/g, function (all, remove, newRegex, newOutput) {
@@ -190,8 +190,8 @@ pmCommands = {
 			reply('EOL');
 		}
 	},
-	channel: function (me, args, from, reply) {
-		if (!config.adminRegex || !from.match(config.adminRegex))
+	channel: function (me, args, fromNick, fromMask, reply) {
+		if (!config.adminRegex || !(fromNick + fromMask).match(config.adminRegex))
 			return;
 
 		args = args.match(/^ *([^ ])([^ ]*)$/);
@@ -234,7 +234,7 @@ pmCommands = {
 				break;
 		}
 	},
-	ping: function (me, args, from, reply) {
+	ping: function (me, args, fromNick, fromMask, reply) {
 		reply('pong');
 	},
 }
@@ -305,18 +305,20 @@ ircConn.addListener('data', function (data) {
 				// 1 = to  3 = command  4 = args (or entire message if no command)
 				if (message) {
 					var cmd = (message[3] || '').toLowerCase();
-					var fromNick = from.match(/^[^!]*/)[0];
+					var fromSplit = from.match(/^([^!]*)(.*)$/);
+					var fromNick = fromSplit[1];
+					var fromMask = fromSplit[2];
 					if (message[1] == config.nick) {
 						cmd = pmCommands[cmd] || pmCommands[null];
 						if (cmd)
-							cmd(message[3], message[4], from, function (message) {
+							cmd(message[3], message[4], fromNick, fromMask, function (message) {
 								return msg(fromNick, message);
 							});
 					} else if (config.channels[message[1]] != undefined) {
 						cmd = commands[cmd] || commands[null];
 						var channel = message[1];
 						if (cmd)
-							cmd(message[3], message[4], from, function (message) {
+							cmd(message[3], message[4], fromNick, fromMask, function (message) {
 								return msg(channel, fromNick + ': ' + message);
 							});
 					}
