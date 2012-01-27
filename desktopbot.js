@@ -101,6 +101,10 @@ function statQ2Server (family, host, port, timeout, callback) {
 		clearTimeout(timer);
 		callback('socket error (' + err + ')');
 	});
+	return function () {
+		sock.close();
+		clearTimeout(timer);
+	};
 }
 
 function formatQ2Stat (serverInfo, players) {
