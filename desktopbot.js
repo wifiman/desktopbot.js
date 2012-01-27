@@ -151,6 +151,15 @@ function formatQ2Stat (serverInfo, players) {
 	return output.replace(/[\x00-\x1F\x7F]/g, '\uFFFD');
 }
 
+function samePlayerNames (playersA, playersB) {
+	if (playersA.length != playersB.length)
+		return false;
+	for (i = 0; i < playersA.length; ++i)
+		if (playersA[i].name != playersB[i].name)
+			return false;
+	return true;
+}
+
 commands = {
 	q2: function (me, args, fromNick, fromMask, inChannel, reply) {
 		var addr = parseQ2Addr(args);
