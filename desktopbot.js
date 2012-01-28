@@ -1,3 +1,5 @@
+// desktopbot.js: a Node.js-based IRC bot
+
 var config = require('./desktopbot.js.conf');
 
 if (!config.autoBans)
