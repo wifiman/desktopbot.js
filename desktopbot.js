@@ -29,6 +29,8 @@ var dns = require('dns');
 var dgram = require('dgram');
 
 var ircConn = net.connect(config.serverPort, config.server, function () {
+	this.setEncoding('utf8');
+
 	var output = 'NICK ' + config.nick + '\r\n'
 	           + 'USER ' + config.nick + ' localhost localhost :' + config.nick + '\r\n';
 
@@ -256,7 +258,7 @@ pmCommands = {
 }
 
 ircConn.addListener('data', function (data) {
-	var lines = (readBuf + data.toString()).split(/\r\n/);
+	var lines = (readBuf + data).split(/\r\n/);
 	readBuf = lines.pop();
 
 	for (var i = 0; i < lines.length; ++i) {
