@@ -307,6 +307,12 @@ ircConn.addListener('data', function (data) {
 				}
 			});
 			break;
+		case 'KICK':
+			payload.replace(/^ ([^ ]*) ([^ ]*)/, function (all, channel, nick) {
+				if (nick == config.nick)
+					delete(config.channels[channel]);
+			});
+			break;
 		case 'PING':
 			this.write('PONG' + payload + '\r\n');
 			break;
