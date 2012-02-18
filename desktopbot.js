@@ -223,26 +223,28 @@ pmCommands = {
 		var joinList, partList;
 		switch (args[1]) {
 		case '+':
-			if (config.channels[args[2]] == undefined)
+			if (config.channels[args[2]] == undefined && joined)
 				ircConn.write('JOIN ' + args[2] + '\r\n');
 			config.channels[args[2]] = true;
 			break;
 		case '-':
 			if (args[2] && args[2] != '') {
-				if (config.channels[args[2]] != undefined)
+				if (config.channels[args[2]] != undefined && joined)
 					ircConn.write('PART ' + args[2] + '\r\n');
 				delete(config.channels[args[2]]);
 			} else {
-				var chanList = [];
-				for (var channel in config.channels)
-					chanList.push(channel);
+				if (joined) {
+					var chanList = [];
+					for (var channel in config.channels)
+						chanList.push(channel);
+					if (chanList.length)
+						ircConn.write('PART ' + chanList.sort().join(',') + '\r\n');
+				}
 				config.channels = {};
-				if (chanList.length)
-					ircConn.write('PART ' + chanList.sort().join(',') + '\r\n');
 			}
 			break;
 		case '=':
-			if (config.channels[args[2]] == undefined)
+			if (config.channels[args[2]] == undefined && joined)
 				ircConn.write('JOIN ' + args[2] + '\r\n');
 			config.channels[args[2]] = false;
 			break;
