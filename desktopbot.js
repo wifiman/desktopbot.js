@@ -282,6 +282,15 @@ ircConn.addListener('data', function (data) {
 				joined = true;
 			}
 			break;
+		case 'INVITE':
+			payload.replace(/^ ([^ ]*) ([^ ]*)/, function (all, nick, channel) {
+				if (nick == config.nick && config.adminRegex && (fromNick + fromMask).match(config.adminRegex) && config.channels[channel] == undefined) {
+					if (joined)
+						ircConn.write('JOIN ' + channel + '\r\n');
+					config.channels[channel] = false;
+				}
+			});
+			break;
 		case 'JOIN':
 			payload.match(/^ ?([^ ]*)( .*)?$/)[1].replace(/[^,]+/g, function (dest) {
 				if (config.channels[dest]) {
