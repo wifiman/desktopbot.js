@@ -238,7 +238,7 @@ pmCommands = {
 					chanList.push(channel);
 				config.channels = {};
 				if (chanList.length)
-					ircConn.write('PART ' + chanList.join(',') + '\r\n');
+					ircConn.write('PART ' + chanList.sort().join(',') + '\r\n');
 			}
 			break;
 		case '=':
@@ -276,7 +276,7 @@ ircConn.addListener('data', function (data) {
 				for (var channel in config.channels)
 					chanList.push(channel);
 				if (chanList.length)
-					this.write('JOIN ' + chanList.join(',') + '\r\n');
+					this.write('JOIN ' + chanList.sort().join(',') + '\r\n');
 				joined = true;
 			}
 			break;
