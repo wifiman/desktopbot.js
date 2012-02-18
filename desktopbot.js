@@ -260,8 +260,8 @@ ircConn.addListener('data', function (data) {
 	readBuf = lines.pop();
 
 	for (var i = 0; i < lines.length; ++i) {
-		lines[i] = lines[i].match(/^(:([^ ]*) )?([^ ]*)(.*)$/);
-		var from = lines[i][2] || '', msgType = lines[i][3], payload = lines[i][4];
+		lines[i] = lines[i].match(/^(:([^ !]*)([^ ]*) )?([^ ]*)(.*)$/);
+		var fromNick = lines[i][2] || '', fromMask = lines[i][3] || '', msgType = lines[i][4], payload = lines[i][5];
 		lines[i] = null;
 
 		switch (msgType) {
@@ -286,9 +286,9 @@ ircConn.addListener('data', function (data) {
 			payload.match(/^ ?([^ ]*)( .*)?$/)[1].replace(/[^,]+/g, function (dest) {
 				if (config.channels[dest]) {
 					for (var i = 0; i < config.autoBans.length; ++i) {
+						var from = fromNick + fromMask;
 						var tmp = from.match(config.autoBans[i].regex);
 						if (tmp) {
-							var nick = from.match(/^[^!]*/)[0];
 							var banMask = config.autoBans[i].output.replace(/\\(.)/g, function (escape, char) {
 								if (char >= '0' && char <= '9')
 									return tmp[parseInt(char)] || '';
@@ -298,9 +298,9 @@ ircConn.addListener('data', function (data) {
 									return char;
 							});
 							// surround with KICKs, to make it harder for the kickee to see the mask but prevent kick-ban race
-							ircConn.write('KICK ' + dest + ' ' + nick + '\r\n'
+							ircConn.write('KICK ' + dest + ' ' + fromNick + '\r\n'
 							            + 'MODE ' + dest + ' +b ' + banMask + '\r\n'
-							            + 'KICK ' + dest + ' ' + nick + '\r\n');
+							            + 'KICK ' + dest + ' ' + fromNick + '\r\n');
 							break;
 						}
 					}
@@ -322,9 +322,6 @@ ircConn.addListener('data', function (data) {
 				// 1 = to  3 = command  4 = args (or entire message if no command)
 				if (message) {
 					var cmd = (message[3] || '').toLowerCase();
-					var fromSplit = from.match(/^([^!]*)(.*)$/);
-					var fromNick = fromSplit[1];
-					var fromMask = fromSplit[2];
 					if (message[1] == config.nick) {
 						cmd = pmCommands[cmd] || pmCommands[null];
 						if (cmd)
