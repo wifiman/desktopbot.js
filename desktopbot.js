@@ -233,16 +233,12 @@ pmCommands = {
 					ircConn.write('PART ' + args[2] + '\r\n');
 				delete(config.channels[args[2]]);
 			} else {
-				var chanList;
-				for (var channel in config.channels) {
-					if (!chanList)
-						chanList = channel;
-					else
-						chanList += ',' + channel;
-				}
+				var chanList = [];
+				for (var channel in config.channels)
+					chanList.push(channel);
 				config.channels = {};
-				if (chanList)
-					ircConn.write('PART ' + chanList + '\r\n');
+				if (chanList.length)
+					ircConn.write('PART ' + chanList.join(',') + '\r\n');
 			}
 			break;
 		case '=':
@@ -276,15 +272,11 @@ ircConn.addListener('data', function (data) {
 			break;
 		case '396':
 			if (!joined) {
-				var chanList;
-				for (var channel in config.channels) {
-					if (!chanList)
-						chanList = channel;
-					else
-						chanList += ',' + channel;
-				}
-				if (chanList)
-					this.write('JOIN ' + chanList + '\r\n');
+				var chanList = [];
+				for (var channel in config.channels)
+					chanList.push(channel);
+				if (chanList.length)
+					this.write('JOIN ' + chanList.join(',') + '\r\n');
 				joined = true;
 			}
 			break;
