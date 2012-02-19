@@ -514,3 +514,15 @@ ircConn.addListener('data', function (data) {
 		}
 	}
 });
+ircConn.addListener('end', function () {
+	for (var channel in config.channels)
+		clearChannelWatches(channel);
+
+	console.log('Disconnected from IRC server.');
+});
+ircConn.addListener('error', function (err) {
+	for (var channel in config.channels)
+		clearChannelWatches(channel);
+
+	console.log('IRC socket error: ' + err);
+});
