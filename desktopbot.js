@@ -129,7 +129,7 @@ function statQ2Server (family, host, port, timeout, callback) {
 
 		callback(null, serverInfo, players);
 	});
-	sock.addListener('error', function (exception) {
+	sock.addListener('error', function (err) {
 		this.close();
 		if (timer)
 			clearTimeout(timer);
