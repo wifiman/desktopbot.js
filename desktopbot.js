@@ -200,7 +200,7 @@ WatchedServer.prototype.removeWatcher = function (channel, nick) {
 WatchedServer.prototype.destroy = function () {
 	for (var channel in this.watchers)
 		for (var nick in this.watchers[channel])
-			this.removeWatcher(nick, channel);
+			this.removeWatcher(channel, nick);
 
 	if (this.socket)
 		this.socket.close();
