@@ -405,6 +405,18 @@ pmCommands = {
 	ping: function (me, args, fromNick, fromMask, inChannel, reply) {
 		reply('pong');
 	},
+	quit: function (me, args, fromNick, fromMask, inChannel, reply) {
+		if (!config.adminRegex || !(fromNick + fromMask).match(config.adminRegex))
+			return;
+
+		for (var channel in config.channels)
+			clearChannelWatches(channel);
+
+		if (args)
+			ircConn.end('QUIT :' + args.match(/^ ?(.*)$/)[1] + '\r\n');
+		else
+			ircConn.end('QUIT\r\n');
+	},
 }
 
 ircConn.addListener('data', function (data) {
