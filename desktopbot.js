@@ -72,7 +72,7 @@ function parseQ2Addr (addr) {
 }
 
 function formatQ2Addr (host, port) {
-	var output = 'quake2://' + (host.match(/[:\]]/) ? ('[' + host + ']') : host);
+	var output = host.match(/[:\]]/) ? ('[' + host + ']') : host;
 	if (port != 27910)
 		output += ':' + port;
 	return output;
@@ -128,7 +128,7 @@ function WatchedServer (family, host, port, addrString) {
 	return this;
 }
 WatchedServer.prototype.notifyWatchers = function (tempOnly, message) {
-	message = this.addrString + ' ' + message;
+	message = 'quake2://' + this.addrString + ' ' + message;
 
 	for (var channel in this.watchers) {
 		var to = [];
@@ -151,7 +151,7 @@ WatchedServer.prototype.notifyWatchers = function (tempOnly, message) {
 };
 WatchedServer.prototype.addWatcher = function (channel, nick, persistent) {
 	if (this.players) {
-		var message = this.addrString + ' ' + formatQ2Stat(this.serverInfo, this.players);
+		var message = 'quake2://' + this.addrString + ' ' + formatQ2Stat(this.serverInfo, this.players);
 		if (channel == null)
 			msg(nick, message);
 		else
@@ -306,7 +306,7 @@ commands = {
 
 		dns.lookup(addr.host, null, function (err, host, family) {
 			if (err) {
-				reply(formatQ2Addr(addr.host, addr.port) + ' : unknown host (' + err + ')');
+				reply('quake2://' + formatQ2Addr(addr.host, addr.port) + ' : unknown host (' + err + ')');
 				return;
 			}
 			if (args[1] == '+')
