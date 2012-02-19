@@ -23,6 +23,10 @@ if (!config.channels) {
 	if (config.channel)
 		config.channels[config.channel] = true;
 }
+if (!config.q2MaxFailures)
+	config.q2MaxFailures = 2;
+if (!config.q2StatInterval)
+	config.q2StatInterval = 5000;
 
 var net = require('net');
 var dns = require('dns');
@@ -160,9 +164,207 @@ function samePlayerNames (playersA, playersB) {
 	return true;
 }
 
+function objectIsEmpty (object) {
+	for (var prop in object)
+		return false;
+	return true;
+}
+
+var watchedServers = {};
+var serverWatchers = {};
+
+function getWatchedServer (family, host, port, onlyIfExists) {
+	var addrString = formatQ2Addr(host, port);
+	if (!watchedServers[addrString] && !onlyIfExists)
+		watchedServers[addrString] = new WatchedServer(family, host, port, addrString);
+	return watchedServers[addrString];
+}
+
+function WatchedServer (family, host, port, addrString) {
+	this.addrString = addrString;
+	this.failCount = 0;
+	this.family = family;
+	this.host = host;
+	this.numTempWatchers = 0;
+	this.port = port;
+	this.serverInfo = {};
+	this.watchers = {};
+	return this;
+}
+WatchedServer.prototype.notifyWatchers = function (tempOnly, message) {
+	message = this.addrString + ' ' + message;
+
+	for (var channel in this.watchers) {
+		var to = [];
+		for (var nick in this.watchers[channel]) {
+			if (tempOnly && this.watchers[channel][nick])
+				continue;
+
+			if (channel == null)
+				msg(nick, message);
+			else
+				to.push(nick);
+
+			// Remove temporary watchers after first notification.
+			if (!this.watchers[channel][nick])
+				this.removeWatcher(channel, nick);
+		}
+		if (to.length)
+			msg(channel, to.sort().join(', ') + ': ' + message);
+	}
+};
+WatchedServer.prototype.addWatcher = function (channel, nick, persistent) {
+	if (this.players) {
+		var message = this.addrString + ' ' + formatQ2Stat(this.serverInfo, this.players);
+		if (channel == null)
+			msg(nick, message);
+		else
+			msg(channel, nick + ': ' + message);
+		if (!persistent)
+			return;
+	}
+
+	if (!this.watchers[channel])
+		this.watchers[channel] = {};
+	this.watchers[channel][nick] = persistent;
+	if (!persistent)
+		this.numTempWatchers++;
+
+	switch (undefined) {
+	case serverWatchers[channel]:
+		serverWatchers[channel] = {};
+	case serverWatchers[channel][nick]:
+		serverWatchers[channel][nick] = {};
+	default:
+		serverWatchers[channel][nick][this.addrString] = true;
+	}
+
+	if (!this.timer) {
+		var me = this;  // icky
+		this.timer = setInterval(function () {
+			me.update();
+		}, config.q2StatInterval);
+		this.update();
+	}
+};
+WatchedServer.prototype.removeWatcher = function (channel, nick) {
+	if (!this.watchers[channel][nick])
+		this.numTempWatchers--;
+	delete(this.watchers[channel][nick]);
+	if (objectIsEmpty(this.watchers[channel]))
+		delete(this.watchers[channel]);
+
+	delete(serverWatchers[channel][nick][this.addrString]);
+	if (objectIsEmpty(serverWatchers[channel][nick])) {
+		delete(serverWatchers[channel][nick]);
+		if (objectIsEmpty(serverWatchers[channel]))
+			delete(serverWatchers[channel]);
+	}
+};
+WatchedServer.prototype.destroy = function () {
+	for (var channel in this.watchers)
+		for (var nick in this.watchers[channel])
+			this.removeWatcher(nick, channel);
+
+	if (this.socket)
+		this.socket.close();
+	clearInterval(this.timer);
+	delete(watchedServers[this.addrString]);
+};
+WatchedServer.prototype.update = function () {
+	if (objectIsEmpty(this.watchers)) {
+		this.destroy();
+		return;
+	}
+
+	if (this.socket) {
+		if (++this.failCount == config.q2MaxFailures) {
+			this.notifyWatchers(false, ': timeout');
+			this.destroy();
+			return;
+		}
+		this.socket.close();
+		delete(this.socket);
+	}
+
+	var me = this;  // icky
+	this.socket = dgram.createSocket('udp' + this.family);
+	this.socket.addListener('message', function (response, rInfo) {
+		if (rInfo.address != me.host || rInfo.port != me.port)
+			return;
+		if (response.length < 4 || response.readUInt32LE(0) != 0xFFFFFFFF)
+			return;
+		response = response.toString('ascii', 4).split('\n');
+		if (!response[0].match(/^print/) || !response[1])
+			return;
+
+		this.close();
+		delete(me.socket);
+		me.serverInfo = {};
+		response[1].replace(/\\([^\\]*)\\([^\\]*)/g, function (all, name, value) {
+			me.serverInfo[name] = value;
+		});
+		var newPlayers = [];
+		for (var i = 2; i < response.length; ++i) {
+			var player = response[i].match(/^([0-9-]+) +([0-9-]+) +"(.*)"( .*)?$/);
+			if (player) {
+				newPlayers.push({
+					score: parseInt(player[1]) || 0,
+					ping: parseInt(player[2]) || 0,
+					name: player[3] || '',
+					index: i - 2,
+				});
+			}
+		}
+
+		newPlayers.sort(function (a, b) {
+			switch (true) {
+			case a.name  < b.name:  return -1;
+			case a.name  > b.name:  return 1;
+			case a.index < b.index: return -1;
+			case a.index > b.index: return 1;
+			default: return 0;
+			}
+		});
+
+		if (!me.players || !samePlayerNames(newPlayers, me.players))
+			me.notifyWatchers(false, formatQ2Stat(me.serverInfo, newPlayers));
+		else if (me.numTempWatchers != 0)
+			me.notifyWatchers(true, formatQ2Stat(me.serverInfo, newPlayers));
+
+		me.players = newPlayers;
+	});
+	this.socket.send(statusPacket, 0, statusPacket.length, this.port, this.host);
+};
+
+function clearNickInChannelWatches (channel, nick) {
+	if (!serverWatchers[channel] || !serverWatchers[channel][nick])
+		return;
+
+	for (var addr in serverWatchers[channel][nick])
+		watchedServers[addr].removeWatcher(channel, nick);
+}
+
+function clearChannelWatches (channel) {
+	if (!serverWatchers[channel])
+		return;
+
+	for (var nick in serverWatchers[channel])
+		for (var addr in serverWatchers[channel][nick])
+			watchedServers[addr].removeWatcher(channel, nick);
+}
+
 commands = {
 	q2: function (me, args, fromNick, fromMask, inChannel, reply) {
-		var addr = parseQ2Addr(args);
+		args = args.match(/^ *([+-])?([^ +-].*)?$/);
+
+		if (!args || (args[1] != '-' && !args[2]))
+			return reply('usage:  query: !q2 SERVER  watch: !q2 +SERVER  unwatch: !q2 -SERVER  unwatch-all: !q2 -');
+
+		if (args[1] == '-' && !args[2])
+			return clearNickInChannelWatches(inChannel, fromNick);
+
+		var addr = parseQ2Addr(args[2]);
 		if (!addr)
 			return reply('unable to parse address');
 
@@ -171,10 +373,14 @@ commands = {
 				reply(formatQ2Addr(addr.host, addr.port) + ' : unknown host (' + err + ')');
 				return;
 			}
-			statQ2Server(family, host, addr.port, 3000, function (err, serverInfo, players) {
-				reply(formatQ2Addr(host, addr.port) + ' '
-				    + (err ? ': ' + err : formatQ2Stat(serverInfo, players)));
-			});
+			if (args[1] == '+')
+				getWatchedServer(family, host, addr.port).addWatcher(inChannel, fromNick, true);
+			else if (args[1] == '-') {
+				var server = getWatchedServer(family, host, addr.port, true);
+				if (server)
+					server.removeWatcher(inChannel, fromNick);
+			} else
+				getWatchedServer(family, host, addr.port).addWatcher(inChannel, fromNick, false);
 		});
 	},
 }
@@ -240,15 +446,16 @@ pmCommands = {
 			if (args[2] && args[2] != '') {
 				if (config.channels[args[2]] != undefined && joined)
 					ircConn.write('PART ' + args[2] + '\r\n');
+				clearChannelWatches(args[2]);
 				delete(config.channels[args[2]]);
 			} else {
-				if (joined) {
-					var chanList = [];
-					for (var channel in config.channels)
-						chanList.push(channel);
-					if (chanList.length)
-						ircConn.write('PART ' + chanList.sort().join(',') + '\r\n');
+				var chanList = [];
+				for (var channel in config.channels) {
+					chanList.push(channel);
+					clearChannelWatches(channel);
 				}
+				if (chanList.length && joined)
+					ircConn.write('PART ' + chanList.sort().join(',') + '\r\n');
 				config.channels = {};
 			}
 			break;
@@ -327,8 +534,15 @@ ircConn.addListener('data', function (data) {
 			break;
 		case 'KICK':
 			payload.replace(/^ ([^ ]*) ([^ ]*)/, function (all, channel, nick) {
-				if (nick == config.nick)
+				if (nick == config.nick) {
+					clearChannelWatches(channel);
 					delete(config.channels[channel]);
+				} else
+					clearNickInChannelWatches(channel, nick);
+			});
+		case 'PART':
+			payload.match(/^ ?([^ ]*)/)[1].replace(/[^,]+/g, function (channel) {
+				clearNickInChannelWatches(channel, fromNick);
 			});
 			break;
 		case 'PING':
@@ -357,6 +571,10 @@ ircConn.addListener('data', function (data) {
 				}
 			} while (0);  // restrict scope of message
 			break;
+		case 'QUIT':
+			// This sucks.
+			for (var channel in config.channels)
+				clearNickInChannelWatches(channel, fromNick);
 		}
 	}
 });
