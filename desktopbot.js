@@ -23,6 +23,8 @@ if (!config.channels) {
 	if (config.channel)
 		config.channels[config.channel] = true;
 }
+if (!config.joinRegex)
+	config.joinRegex = /^(:[^ ]* )?396( |$)/;
 if (!config.q2MaxFailures)
 	config.q2MaxFailures = 2;
 if (!config.q2StatInterval)
@@ -424,6 +426,15 @@ ircConn.addListener('data', function (data) {
 	readBuf = lines.pop();
 
 	for (var i = 0; i < lines.length; ++i) {
+		if (!joined && lines[i].match(config.joinRegex)) {
+			var chanList = [];
+			for (var channel in config.channels)
+				chanList.push(channel);
+			if (chanList.length)
+				this.write('JOIN ' + chanList.sort().join(',') + '\r\n');
+			joined = true;
+		}
+
 		lines[i] = lines[i].match(/^(:([^ !]*)([^ ]*) )?([^ ]*)(.*)$/);
 		var fromNick = lines[i][2] || '', fromMask = lines[i][3] || '', msgType = lines[i][4], payload = lines[i][5];
 		lines[i] = null;
@@ -434,16 +445,6 @@ ircConn.addListener('data', function (data) {
 				if (config.auth)
 					config.auth(this);
 				authed = true;
-			}
-			break;
-		case '396':
-			if (!joined) {
-				var chanList = [];
-				for (var channel in config.channels)
-					chanList.push(channel);
-				if (chanList.length)
-					this.write('JOIN ' + chanList.sort().join(',') + '\r\n');
-				joined = true;
 			}
 			break;
 		case 'INVITE':
