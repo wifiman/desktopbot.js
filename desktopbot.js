@@ -311,6 +311,19 @@ function clearNickWatches (nick) {
 		clearNickInChannelWatches(channel, nick);
 }
 
+function renameWatcher (oldNick, newNick) {
+	for (var channel in serverWatchers) {
+		if (serverWatchers[channel][oldNick]) {
+			for (var addr in serverWatchers[channel][oldNick]) {
+				watchedServers[addr].watchers[channel][newNick] = watchedServers[addr].watchers[channel][oldNick];
+				delete(watchedServers[addr].watchers[channel][oldNick]);
+			}
+			serverWatchers[channel][newNick] = serverWatchers[channel][oldNick];
+			delete(serverWatchers[channel][oldNick]);
+		}
+	}
+}
+
 commands = {
 	q2: function (me, args, fromNick, fromMask, inChannel, reply) {
 		args = args.match(/^ *([+-])?([^ +-].*)?$/);
@@ -511,6 +524,11 @@ ircConn.addListener('data', function (data) {
 				} else
 					clearNickInChannelWatches(channel, nick);
 			});
+		case 'NICK':
+			payload.replace(/^ :([^ ]*)/, function (all, newNick) {
+				renameWatcher(fromNick, newNick);
+			});
+			break;
 		case 'PART':
 			payload.match(/^ ?([^ ]*)/)[1].replace(/[^,]+/g, function (channel) {
 				clearNickInChannelWatches(channel, fromNick);
