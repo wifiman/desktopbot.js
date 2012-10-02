@@ -37,6 +37,16 @@ var dgram = require('dgram');
 var ircConn = net.connect(config.serverPort, config.server, function () {
 	this.setEncoding('utf8');
 
+	this.realWrite = this.write;
+	var writeBuffer = '';
+	this.write = function (message) {
+		var lines = (writeBuffer + message).split(/\r\n/);
+		writeBuffer = lines.pop();
+
+		if (lines.length > 0)
+			this.realWrite(lines.join('\r\n') + '\r\n');
+	}
+
 	var output = 'NICK ' + config.nick + '\r\n'
 	           + 'USER ' + config.nick + ' localhost localhost :' + config.nick + '\r\n';
 
