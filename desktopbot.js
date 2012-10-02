@@ -43,6 +43,10 @@ var ircConn = net.connect(config.serverPort, config.server, function () {
 		var lines = (writeBuffer + message).split(/\r\n/);
 		writeBuffer = lines.pop();
 
+		if (config.log)
+			for (var i = 0; i < lines.length; ++i)
+				config.log(true, lines[i])
+
 		if (lines.length > 0)
 			this.realWrite(lines.join('\r\n') + '\r\n');
 	}
