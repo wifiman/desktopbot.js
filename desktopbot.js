@@ -306,6 +306,11 @@ function clearChannelWatches (channel) {
 			watchedServers[addr].removeWatcher(channel, nick);
 }
 
+function clearNickWatches (nick) {
+	for (var channel in serverWatchers)
+		clearNickInChannelWatches(channel, nick);
+}
+
 commands = {
 	q2: function (me, args, fromNick, fromMask, inChannel, reply) {
 		args = args.match(/^ *([+-])?([^ +-].*)?$/);
@@ -538,9 +543,7 @@ ircConn.addListener('data', function (data) {
 			} while (0);  // restrict scope of message
 			break;
 		case 'QUIT':
-			// This sucks.
-			for (var channel in config.channels)
-				clearNickInChannelWatches(channel, fromNick);
+			clearNickWatches(fromNick);
 		}
 	}
 });
