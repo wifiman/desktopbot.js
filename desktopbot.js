@@ -426,6 +426,9 @@ ircConn.addListener('data', function (data) {
 	readBuf = lines.pop();
 
 	for (var i = 0; i < lines.length; ++i) {
+		if (config.log)
+			config.log(false, lines[i]);
+
 		if (!joined && lines[i].match(config.joinRegex)) {
 			var chanList = [];
 			for (var channel in config.channels)
