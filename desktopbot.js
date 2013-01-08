@@ -497,7 +497,7 @@ ircConn.addListener('data', function (data) {
 			break;
 		case 'JOIN':
 			payload.match(/^ ?([^ ]*)( .*)?$/)[1].replace(/[^,]+/g, function (dest) {
-				if (config.channels[dest] && !isAdmin(fromNick, fromMask)) {
+				if ( config.channels[dest] && (config.autoBanAdmins || !isAdmin(fromNick, fromMask)) ) {
 					for (var i = 0; i < config.autoBans.length; ++i) {
 						var from = fromNick + fromMask;
 						var tmp = from.match(config.autoBans[i].regex);
