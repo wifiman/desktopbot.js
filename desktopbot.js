@@ -70,6 +70,10 @@ function msg (to, message) {
 	return ircConn.write('PRIVMSG ' + to + ' :' + message + '\r\n');
 }
 
+function isAdmin (nick, mask) {
+	return config.adminRegex && (nick + mask).match(config.adminRegex);
+}
+
 function parseQ2Addr (addr) {
 	addr = addr.toLowerCase().match(/^ *(quake2:\/\/)?([^\/?# ]+)[^# ]*(#(.*))?$/);
 	// 2 = server  4 = player
@@ -357,7 +361,7 @@ commands = {
 
 pmCommands = {
 	ban: function (me, args, fromNick, fromMask, inChannel, reply) {
-		if (!config.adminRegex || !(fromNick + fromMask).match(config.adminRegex))
+		if (!isAdmin(fromNick, fromMask))
 			return;
 
 		var a = args.replace(/-([^ ]+)|[^- ]([^ ]+) +([^ ]+)/g, function (all, remove, newRegex, newOutput) {
@@ -394,7 +398,7 @@ pmCommands = {
 		}
 	},
 	channel: function (me, args, fromNick, fromMask, inChannel, reply) {
-		if (!config.adminRegex || !(fromNick + fromMask).match(config.adminRegex))
+		if (!isAdmin(fromNick, fromMask))
 			return;
 
 		args = args.match(/^ *([^ ])([^ ]*)$/);
@@ -440,7 +444,7 @@ pmCommands = {
 		reply('pong');
 	},
 	quit: function (me, args, fromNick, fromMask, inChannel, reply) {
-		if (!config.adminRegex || !(fromNick + fromMask).match(config.adminRegex))
+		if (!isAdmin(fromNick, fromMask))
 			return;
 
 		for (var channel in config.channels)
@@ -484,7 +488,7 @@ ircConn.addListener('data', function (data) {
 			break;
 		case 'INVITE':
 			payload.replace(/^ ([^ ]*) ([^ ]*)/, function (all, nick, channel) {
-				if (nick == config.nick && config.adminRegex && (fromNick + fromMask).match(config.adminRegex) && config.channels[channel] == undefined) {
+				if (nick == config.nick && isAdmin(fromNick, fromMask) && config.channels[channel] == undefined) {
 					if (joined)
 						ircConn.write('JOIN ' + channel + '\r\n');
 					config.channels[channel] = false;
