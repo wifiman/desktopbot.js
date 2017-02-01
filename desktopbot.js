@@ -23,6 +23,8 @@ if (!config.channels) {
 	if (config.channel)
 		config.channels[config.channel] = true;
 }
+if (!('inviteJoinMessage' in config))
+	config.inviteJoinMessage = '\u0001ACTION was invited by \\n\\m | query Quake \u2161 servers with !q2\u0001';
 if (!config.joinRegex)
 	config.joinRegex = /^(:[^ ]* )?396( |$)/;
 if (!config.q2MaxFailures)
