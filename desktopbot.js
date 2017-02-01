@@ -498,6 +498,18 @@ ircConn.addListener('data', function (data) {
 					return;
 
 				ircConn.write('JOIN ' + channel + '\r\n');
+				if (config.inviteJoinMessage) {
+					var message = config.inviteJoinMessage.replace(/\\(.)/g, function (escape, char) {
+						switch (char) {
+						case 'm':
+							return fromMask;
+						case 'n':
+							return fromNick;
+						}
+						return char;
+					});
+					ircConn.write('PRIVMSG ' + channel + ' :' + message + '\r\n');
+				}
 				config.channels[channel] = false;
 			});
 			break;
