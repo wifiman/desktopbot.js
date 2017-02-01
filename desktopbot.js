@@ -91,10 +91,10 @@ function parseQ2Addr (addr) {
 	var port = out[2] || out[4];
 	if (!(out[1] || out[3]))
 		return null;
-	ret = {
+	var ret = {
 		host: host,
 		port: parseInt(port && port.match(/^\d+$/)) || 27910,
-	}
+	};
 	if (player)
 		ret.player = player;
 	return ret;
