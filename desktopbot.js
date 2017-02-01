@@ -26,7 +26,7 @@ if (!config.channels) {
 if (!('inviteJoinMessage' in config))
 	config.inviteJoinMessage = '\u0001ACTION was invited by \\n\\m | query Quake \u2161 servers with !q2\u0001';
 if (!config.joinRegex)
-	config.joinRegex = /^(:[^ ]* )?396( |$)/;
+	config.joinRegex = /^(?::[^ ]* )?396( |$)/;
 if (!config.q2MaxFailures)
 	config.q2MaxFailures = 2;
 if (!config.q2StatInterval)
@@ -77,19 +77,19 @@ function isAdmin (nick, mask) {
 }
 
 function parseQ2Addr (addr) {
-	addr = addr.toLowerCase().match(/^ *(quake2:\/\/)?([^\/?# ]+)[^# ]*(#(.*))?$/);
-	// 2 = server  4 = player
+	addr = addr.toLowerCase().match(/^ *(?:quake2:\/\/)?([^\/?# ]+)[^# ]*(?:#(.*))?$/);
+	// 1 = server  2 = player
 	if (!addr)
 		return null;
-	var out = addr[2].match(/^(([^\]]*?)(:([^\]:]*))?|\[?(.*)\]:?([^\]]*))$/);
-	if (!out || !(out[2] || out[5]))
+	var out = addr[1].match(/^(?:([^\]]*?)(?::([^\]:]*))?|\[?(.*)\]:?([^\]]*))$/);
+	if (!out || !(out[1] || out[3]))
 		return null;
 	ret = {
-		host: out[2] || out[5],
-		port: parseInt((out[4] && out[4].match(/^\d+$/)) || (out[6] && out[6].match(/^\d+$/))) || 27910,
+		host: out[1] || out[3],
+		port: parseInt((out[2] && out[2].match(/^\d+$/)) || (out[4] && out[4].match(/^\d+$/))) || 27910,
 	}
-	if (addr[4])
-		ret.player = addr[4];
+	if (addr[2])
+		ret.player = addr[2];
 	return ret;
 }
 
@@ -264,7 +264,7 @@ WatchedServer.prototype.update = function () {
 		});
 		var newPlayers = [];
 		for (var i = 2; i < response.length; ++i) {
-			var player = response[i].match(/^([0-9-]+) +([0-9-]+) +"(.*)"( .*)?$/);
+			var player = response[i].match(/^([0-9-]+) +([0-9-]+) +"(.*)"(?: .*)?$/);
 			if (player) {
 				newPlayers.push({
 					score: parseInt(player[1]) || 0,
@@ -476,8 +476,8 @@ ircConn.addListener('data', function (data) {
 			joined = true;
 		}
 
-		lines[i] = lines[i].match(/^(:([^ !]*)([^ ]*) )?([^ ]*)(.*)$/);
-		var fromNick = lines[i][2] || '', fromMask = lines[i][3] || '', msgType = lines[i][4], payload = lines[i][5];
+		lines[i] = lines[i].match(/^(?::([^ !]*)([^ ]*) )?([^ ]*)(.*)$/);
+		var fromNick = lines[i][1] || '', fromMask = lines[i][2] || '', msgType = lines[i][3], payload = lines[i][4];
 		lines[i] = null;
 
 		switch (msgType) {
@@ -516,7 +516,7 @@ ircConn.addListener('data', function (data) {
 			});
 			break;
 		case 'JOIN':
-			payload.match(/^ ?([^ ]*)( .*)?$/)[1].replace(/[^,]+/g, function (dest) {
+			payload.match(/^ ?([^ ]*)(?: .*)?$/)[1].replace(/[^,]+/g, function (dest) {
 				if ( config.channels[dest] && (config.autoBanAdmins || !isAdmin(fromNick, fromMask)) ) {
 					for (var i = 0; i < config.autoBans.length; ++i) {
 						var from = fromNick + fromMask;
@@ -563,21 +563,21 @@ ircConn.addListener('data', function (data) {
 			break;
 		case 'PRIVMSG':
 			do {
-				var message = payload.match(/^ ([^ ]*) :(!([0-9A-Za-z]*))?(.*)$/);
-				// 1 = to  3 = command  4 = args (or entire message if no command)
+				var message = payload.match(/^ ([^ ]*) :(?:!([0-9A-Za-z]*))?(.*)$/);
+				// 1 = to  2 = command  3 = args (or entire message if no command)
 				if (message) {
-					var cmd = (message[3] || '').toLowerCase();
+					var cmd = (message[2] || '').toLowerCase();
 					if (message[1] == config.nick) {
 						cmd = pmCommands[cmd] || pmCommands[null];
 						if (cmd)
-							cmd(message[3], message[4], fromNick, fromMask, null, function (message) {
+							cmd(message[2], message[3], fromNick, fromMask, null, function (message) {
 								return msg(fromNick, message);
 							});
 					} else if (config.channels[message[1]] != undefined) {
 						cmd = commands[cmd] || commands[null];
 						var channel = message[1];
 						if (cmd)
-							cmd(message[3], message[4], fromNick, fromMask, channel, function (message) {
+							cmd(message[2], message[3], fromNick, fromMask, channel, function (message) {
 								return msg(channel, fromNick + ': ' + message);
 							});
 					}
