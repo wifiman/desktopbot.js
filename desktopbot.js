@@ -574,7 +574,7 @@ ircConn.addListener('data', function (data) {
 				if (to == config.nick) {
 					cmd = pmCommands[cmd] || pmCommands[null];
 					if (cmd)
-						cmd(command, args, fromNick, fromMask, null, function (message) {
+						cmd(command, args.match(/^(.*?)[\t ]*$/)[1], fromNick, fromMask, null, function (message) {
 							return msg(fromNick, message);
 						});
 				} else if (config.channels[to] != undefined) {
