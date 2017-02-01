@@ -488,6 +488,8 @@ ircConn.addListener('data', function (data) {
 			break;
 		case 'INVITE':
 			payload.replace(/^ ([^ ]*) ([^ ]*)/, function (all, nick, channel) {
+				if (!joined)
+					return;
 				if (nick != config.nick)
 					return;
 				if (!config.acceptAllInvites && !isAdmin(fromNick, fromMask))
@@ -495,8 +497,7 @@ ircConn.addListener('data', function (data) {
 				if (channel in config.channels)
 					return;
 
-				if (joined)
-					ircConn.write('JOIN ' + channel + '\r\n');
+				ircConn.write('JOIN ' + channel + '\r\n');
 				config.channels[channel] = false;
 			});
 			break;
