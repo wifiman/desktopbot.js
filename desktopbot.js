@@ -569,28 +569,22 @@ ircConn.addListener('data', function (data) {
 			this.write('PONG' + payload + '\r\n');
 			break;
 		case 'PRIVMSG':
-			do {
-				var message = payload.match(/^ ([^ ]*) :(?:!([0-9A-Za-z]*))?(.*)$/);
-				if (message) {
-					var to = message[1];
-					var command = message[2];
-					var args = message[3];
-					var cmd = (command || '').toLowerCase();
-					if (to == config.nick) {
-						cmd = pmCommands[cmd] || pmCommands[null];
-						if (cmd)
-							cmd(command, args, fromNick, fromMask, null, function (message) {
-								return msg(fromNick, message);
-							});
-					} else if (config.channels[to] != undefined) {
-						cmd = commands[cmd] || commands[null];
-						if (cmd)
-							cmd(command, args, fromNick, fromMask, to, function (message) {
-								return msg(to, fromNick + ': ' + message);
-							});
-					}
+			payload.replace(/^ ([^ ]*) :(?:!([0-9A-Za-z]*))?(.*)$/, function (all, to, command, args) {
+				var cmd = (command || '').toLowerCase();
+				if (to == config.nick) {
+					cmd = pmCommands[cmd] || pmCommands[null];
+					if (cmd)
+						cmd(command, args, fromNick, fromMask, null, function (message) {
+							return msg(fromNick, message);
+						});
+				} else if (config.channels[to] != undefined) {
+					cmd = commands[cmd] || commands[null];
+					if (cmd)
+						cmd(command, args, fromNick, fromMask, to, function (message) {
+							return msg(to, fromNick + ': ' + message);
+						});
 				}
-			} while (0);  // restrict scope of message
+			});
 			break;
 		case 'QUIT':
 			clearNickWatches(fromNick);
