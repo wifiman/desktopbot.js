@@ -490,7 +490,7 @@ ircConn.addListener('data', function (data) {
 			payload.replace(/^ ([^ ]*) ([^ ]*)/, function (all, nick, channel) {
 				if (nick != config.nick)
 					return;
-				if (!isAdmin(fromNick, fromMask))
+				if (!config.acceptAllInvites && !isAdmin(fromNick, fromMask))
 					return;
 				if (channel in config.channels)
 					return;
