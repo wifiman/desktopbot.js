@@ -78,18 +78,25 @@ function isAdmin (nick, mask) {
 
 function parseQ2Addr (addr) {
 	addr = addr.toLowerCase().match(/^ *(?:quake2:\/\/)?([^\/?# ]+)[^# ]*(?:#(.*))?$/);
-	// 1 = server  2 = player
 	if (!addr)
 		return null;
-	var out = addr[1].match(/^(?:([^\]]*?)(?::([^\]:]*))?|\[?(.*)\]:?([^\]]*))$/);
-	if (!out || !(out[1] || out[3]))
+	var server = addr[1];
+	var player = addr[2];
+	addr = undefined;
+
+	var out = server.match(/^(?:([^\]]*?)(?::([^\]:]*))?|\[?(.*)\]:?([^\]]*))$/);
+	if (!out)
+		return null;
+	var host = out[1] || out[3];
+	var port = out[2] || out[4];
+	if (!(out[1] || out[3]))
 		return null;
 	ret = {
-		host: out[1] || out[3],
-		port: parseInt((out[2] && out[2].match(/^\d+$/)) || (out[4] && out[4].match(/^\d+$/))) || 27910,
+		host: host,
+		port: parseInt(port && port.match(/^\d+$/)) || 27910,
 	}
-	if (addr[2])
-		ret.player = addr[2];
+	if (player)
+		ret.player = player;
 	return ret;
 }
 
@@ -564,21 +571,22 @@ ircConn.addListener('data', function (data) {
 		case 'PRIVMSG':
 			do {
 				var message = payload.match(/^ ([^ ]*) :(?:!([0-9A-Za-z]*))?(.*)$/);
-				// 1 = to  2 = command  3 = args (or entire message if no command)
 				if (message) {
-					var cmd = (message[2] || '').toLowerCase();
-					if (message[1] == config.nick) {
+					var to = message[1];
+					var command = message[2];
+					var args = message[3];
+					var cmd = (command || '').toLowerCase();
+					if (to == config.nick) {
 						cmd = pmCommands[cmd] || pmCommands[null];
 						if (cmd)
-							cmd(message[2], message[3], fromNick, fromMask, null, function (message) {
+							cmd(command, args, fromNick, fromMask, null, function (message) {
 								return msg(fromNick, message);
 							});
-					} else if (config.channels[message[1]] != undefined) {
+					} else if (config.channels[to] != undefined) {
 						cmd = commands[cmd] || commands[null];
-						var channel = message[1];
 						if (cmd)
-							cmd(message[2], message[3], fromNick, fromMask, channel, function (message) {
-								return msg(channel, fromNick + ': ' + message);
+							cmd(command, args, fromNick, fromMask, to, function (message) {
+								return msg(to, fromNick + ': ' + message);
 							});
 					}
 				}
