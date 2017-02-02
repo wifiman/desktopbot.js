@@ -36,7 +36,7 @@ var net = require('net');
 var dns = require('dns');
 var dgram = require('dgram');
 
-var ircConn = net.connect(config.serverPort, config.server, function () {
+var ircConn = net.connect(config.server, function () {
 	this.setEncoding('utf8');
 
 	this.realWrite = this.write;
