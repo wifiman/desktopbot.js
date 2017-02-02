@@ -46,7 +46,7 @@ if (config.tls)
 	ircConn = tls.connect(config.server);
 else
 	ircConn = net.connect(config.server);
-ircConn.addListener('connect', function () {
+ircConn.addListener(tls ? 'secureConnect' : 'connect', function () {
 	this.setEncoding('utf8');
 
 	this.realWrite = this.write;
