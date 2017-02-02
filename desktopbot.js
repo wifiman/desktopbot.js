@@ -506,7 +506,7 @@ ircConn.addListener('data', function (data) {
 			}
 			break;
 		case 'INVITE':
-			payload.replace(/^ ([^ ]*) ([^ ]*)/, function (all, nick, channel) {
+			payload.replace(/^ ([^ ]*) :?([^ ]*)/, function (all, nick, channel) {
 				if (!joined)
 					return;
 				if (nick != config.nick)
