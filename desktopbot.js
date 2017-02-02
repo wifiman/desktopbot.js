@@ -32,11 +32,21 @@ if (!config.q2MaxFailures)
 if (!config.q2StatInterval)
 	config.q2StatInterval = 5000;
 
-var net = require('net');
+var net;
+var tls;
+if (config.tls)
+	tls = require('tls');
+else
+	net = require('net');
 var dns = require('dns');
 var dgram = require('dgram');
 
-var ircConn = net.connect(config.server, function () {
+var ircConn;
+if (config.tls)
+	ircConn = tls.connect(config.server);
+else
+	ircConn = net.connect(config.server);
+ircConn.addListener('connect', function () {
 	this.setEncoding('utf8');
 
 	this.realWrite = this.write;
