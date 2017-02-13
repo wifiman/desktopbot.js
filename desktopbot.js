@@ -94,6 +94,23 @@ function matchExpand (template, match) {
 	});
 }
 
+function applyAutoBans (channel, nick, mask) {
+	if ( config.channels[channel] && (config.autoBanAdmins || !isAdmin(nick, mask)) ) {
+		var from = nick + mask;
+		for (var i = 0; i < config.autoBans.length; ++i) {
+			var tmp = from.match(config.autoBans[i].regex);
+			if (tmp) {
+				var banMask = matchExpand(config.autoBans[i].output, tmp);
+				// surround with KICKs, to make it harder for the kickee to see the mask but prevent kick-ban race
+				ircConn.write('KICK ' + channel + ' ' + nick + '\r\n'
+				            + 'MODE ' + channel + ' +b ' + banMask + '\r\n'
+				            + 'KICK ' + channel + ' ' + nick + '\r\n');
+				break;
+			}
+		}
+	}
+}
+
 function parseQ2Addr (addr) {
 	addr = addr.toLowerCase().match(/^ *(?:quake2:\/\/)?([^\/?# ]+)[^# ]*(?:#(.*))?$/);
 	if (!addr)
@@ -536,20 +553,7 @@ ircConn.addListener('data', function (data) {
 			break;
 		case 'JOIN':
 			payload.match(/^ ?([^ ]*)(?: .*)?$/)[1].replace(/[^,]+/g, function (dest) {
-				if ( config.channels[dest] && (config.autoBanAdmins || !isAdmin(fromNick, fromMask)) ) {
-					var from = fromNick + fromMask;
-					for (var i = 0; i < config.autoBans.length; ++i) {
-						var tmp = from.match(config.autoBans[i].regex);
-						if (tmp) {
-							var banMask = matchExpand(config.autoBans[i].output, tmp);
-							// surround with KICKs, to make it harder for the kickee to see the mask but prevent kick-ban race
-							ircConn.write('KICK ' + dest + ' ' + fromNick + '\r\n'
-							            + 'MODE ' + dest + ' +b ' + banMask + '\r\n'
-							            + 'KICK ' + dest + ' ' + fromNick + '\r\n');
-							break;
-						}
-					}
-				}
+				applyAutoBans(dest, fromNick, fromMask);
 			});
 			break;
 		case 'KICK':
