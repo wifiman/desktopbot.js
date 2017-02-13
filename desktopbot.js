@@ -569,6 +569,9 @@ ircConn.addListener('data', function (data) {
 		case 'NICK':
 			payload.replace(/^ :([^ ]*)/, function (all, newNick) {
 				renameWatcher(fromNick, newNick);
+				if (config.autoBanOnNickChange)
+					for (var channel in config.channels)
+						applyAutoBans(channel, newNick, fromMask);
 			});
 			break;
 		case 'PART':
