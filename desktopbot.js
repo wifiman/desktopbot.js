@@ -97,16 +97,18 @@ function matchExpand (template, match) {
 function applyAutoBans (channel, nick, mask) {
 	if ( config.channels[channel] && (config.autoBanAdmins || !isAdmin(nick, mask)) ) {
 		var from = nick + mask;
+		var banMasks = [];
 		for (var i = 0; i < config.autoBans.length; ++i) {
 			var tmp = from.match(config.autoBans[i].regex);
-			if (tmp) {
-				var banMask = matchExpand(config.autoBans[i].output, tmp);
-				// surround with KICKs, to make it harder for the kickee to see the mask but prevent kick-ban race
-				ircConn.write('KICK ' + channel + ' ' + nick + '\r\n'
-				            + 'MODE ' + channel + ' +b ' + banMask + '\r\n'
-				            + 'KICK ' + channel + ' ' + nick + '\r\n');
-				break;
-			}
+			if (tmp)
+				banMasks.push(matchExpand(config.autoBans[i].output, tmp));
+		}
+		if (banMasks.length) {
+			banMasks.sort();
+			// surround with KICKs, to make it harder for the kickee to see the mask(s) but prevent kick-ban race
+			ircConn.write('KICK ' + channel + ' ' + nick + '\r\n'
+			            + 'MODE ' + channel + ' +' + (new Array(banMasks.length + 1).join('b')) + ' ' + banMasks.join(' ') + '\r\n'
+			            + 'KICK ' + channel + ' ' + nick + '\r\n');
 		}
 	}
 }
