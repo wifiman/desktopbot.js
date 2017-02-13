@@ -439,13 +439,10 @@ pmCommands = {
 				clearChannelWatches(args[2]);
 				delete(config.channels[args[2]]);
 			} else {
-				var chanList = [];
-				for (var channel in config.channels) {
-					chanList.push(channel);
+				for (var channel in config.channels)
 					clearChannelWatches(channel);
-				}
-				if (chanList.length && joined)
-					ircConn.write('PART ' + chanList.sort().join(',') + '\r\n');
+				if (!objectIsEmpty(config.channels) && joined)
+					ircConn.write('PART ' + Object.keys(config.channels).sort().join(',') + '\r\n');
 				config.channels = {};
 			}
 			break;
@@ -482,11 +479,8 @@ ircConn.addListener('data', function (data) {
 			config.log(false, lines[i]);
 
 		if (!joined && lines[i].match(config.joinRegex)) {
-			var chanList = [];
-			for (var channel in config.channels)
-				chanList.push(channel);
-			if (chanList.length)
-				this.write('JOIN ' + chanList.sort().join(',') + '\r\n');
+			if (!objectIsEmpty(config.channels))
+				this.write('JOIN ' + Object.keys(config.channels).sort().join(',') + '\r\n');
 			joined = true;
 		}
 
