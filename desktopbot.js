@@ -83,6 +83,17 @@ function isAdmin (nick, mask) {
 	return config.adminRegex && (nick + mask).match(config.adminRegex);
 }
 
+function matchExpand (template, match) {
+	return template.replace(/\\(.)/g, function (escape, char) {
+		if (char >= '0' && char <= '9')
+			return match[parseInt(char)] || '';
+		else if (char == '*')
+			return match.input;
+		else
+			return char;
+	});
+}
+
 function parseQ2Addr (addr) {
 	addr = addr.toLowerCase().match(/^ *(?:quake2:\/\/)?([^\/?# ]+)[^# ]*(?:#(.*))?$/);
 	if (!addr)
@@ -530,14 +541,7 @@ ircConn.addListener('data', function (data) {
 					for (var i = 0; i < config.autoBans.length; ++i) {
 						var tmp = from.match(config.autoBans[i].regex);
 						if (tmp) {
-							var banMask = config.autoBans[i].output.replace(/\\(.)/g, function (escape, char) {
-								if (char >= '0' && char <= '9')
-									return tmp[parseInt(char)] || '';
-								else if (char == '*')
-									return from;
-								else
-									return char;
-							});
+							var banMask = matchExpand(config.autoBans[i].output, tmp);
 							// surround with KICKs, to make it harder for the kickee to see the mask but prevent kick-ban race
 							ircConn.write('KICK ' + dest + ' ' + fromNick + '\r\n'
 							            + 'MODE ' + dest + ' +b ' + banMask + '\r\n'
