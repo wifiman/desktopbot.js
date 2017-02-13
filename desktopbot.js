@@ -526,8 +526,8 @@ ircConn.addListener('data', function (data) {
 		case 'JOIN':
 			payload.match(/^ ?([^ ]*)(?: .*)?$/)[1].replace(/[^,]+/g, function (dest) {
 				if ( config.channels[dest] && (config.autoBanAdmins || !isAdmin(fromNick, fromMask)) ) {
+					var from = fromNick + fromMask;
 					for (var i = 0; i < config.autoBans.length; ++i) {
-						var from = fromNick + fromMask;
 						var tmp = from.match(config.autoBans[i].regex);
 						if (tmp) {
 							var banMask = config.autoBans[i].output.replace(/\\(.)/g, function (escape, char) {
