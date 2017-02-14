@@ -532,6 +532,43 @@ pmCommands = {
 			break;
 		}
 	},
+	mode: function (me, args, fromNick, fromMask, inChannel, reply) {
+		if (!isAdmin(fromNick, fromMask))
+			return;
+
+		var a = args.replace(/-([^ ]+)|[^- ]([^ ]+) +([^ ]+)/g, function (all, remove, newRegex, newModes) {
+			if (remove) {
+				remove = '/' + remove + '/';
+				for (i = 0; i < config.autoModes.length; ++i) {
+					if (config.autoModes[i].regex.toString() == remove) {
+						config.autoModes.splice(i, 1);
+						return;
+					}
+				}
+				reply('no match');
+				return;
+			}
+
+			var regex;
+			try {
+				regex = new RegExp(newRegex);
+			} catch (err) {
+				reply('unable to compile (' + err + ')');
+				return;
+			}
+
+			config.autoModes.push({
+				regex: regex,
+				modes: newModes,
+			});
+		});
+		if (a == args) {
+			for (i = 0; i < config.autoModes.length; ++i) {
+				reply('\u201C' + config.autoModes[i].regex.toString().match(/^\/(.*)\/$/)[1] + '\u201D \u2192 \u201C' + config.autoModes[i].modes + '\u201D');
+			}
+			reply('EOL');
+		}
+	},
 	ping: function (me, args, fromNick, fromMask, inChannel, reply) {
 		reply('pong');
 	},
