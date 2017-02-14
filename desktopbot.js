@@ -18,6 +18,8 @@ var config = require('./desktopbot.js.conf');
 
 if (!config.autoBans)
 	config.autoBans = [];
+if (!config.autoModes)
+	config.autoModes = [];
 if (!config.channels)
 	config.channels = {};
 if (!('inviteJoinMessage' in config))
@@ -116,6 +118,48 @@ function applyAutoBans (channel, nick, mask) {
 	            + 'MODE ' + channel + ' +' + (new Array(banMasks.length + 1).join('b')) + ' ' + banMasks.join(' ') + '\r\n'
 	            + 'KICK ' + channel + ' ' + nick + '\r\n');
 	return true;
+}
+
+function applyAutoModes (channel, nick, mask) {
+	if (!config.channels[channel])
+		return;
+
+	var from = nick + mask;
+	var modes = {
+		true: {},
+		false: {},
+	};
+	for (var i = 0; i < config.autoModes.length; ++i) {
+		if (config.autoModes[i].regex.test(from)) {
+			var add = true;
+			config.autoModes[i].modes.replace(/[-+0-9A-Za-z]/g, function (c) {
+				switch (c) {
+				case '+':
+					add = true;
+					break;
+				case '-':
+					add = false;
+					break;
+				default:
+					modes[add][c] = true;
+					delete(modes[!add][c]);
+				}
+				return c;
+			});
+		}
+	}
+	modes[true] = Object.keys(modes[true]).sort();
+	modes[false] = Object.keys(modes[false]).sort();
+	var modeCount = modes[true].length + modes[false].length;
+	if (!modeCount)
+		return;
+
+	var modeList = '';
+	if (modes[true].length)
+		modeList += '+' + modes[true].join('');
+	if (modes[false].length)
+		modeList += '-' + modes[false].join('');
+	ircConn.write('MODE ' + channel + ' ' + modeList + new Array(modeCount + 1).join(' ' + nick) + '\r\n');
 }
 
 function parseQ2Addr (addr) {
@@ -560,7 +604,7 @@ ircConn.addListener('data', function (data) {
 			break;
 		case 'JOIN':
 			payload.match(/^ ?([^ ]*)(?: .*)?$/)[1].replace(/[^,]+/g, function (dest) {
-				applyAutoBans(dest, fromNick, fromMask);
+				applyAutoBans(dest, fromNick, fromMask) || applyAutoModes(dest, fromNick, fromMask);
 			});
 			break;
 		case 'KICK':
